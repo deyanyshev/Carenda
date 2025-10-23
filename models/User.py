@@ -9,10 +9,6 @@ class User:
         self.phone = phone  # Номер телефона пользователя
         self.driver_license = driver_license  # Номер водительского удостоверения
 
-        # Статус и финансы пользователя
-        self.is_verified = False  # Прошел ли пользователь верификацию (True/False)
-        self.balance = 0.0  # Баланс пользователя (в рублях)
-
         # История и текущая аренда
         self.rental_history = []  # Список предыдущих аренд (история поездок)
         self.current_rental = None  # Текущая активная аренда (None если нет активной аренды)
