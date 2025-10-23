@@ -1,3 +1,6 @@
+from models.Transport import Transport
+
+
 class Car(Transport):
     """Класс автомобиля - наследует от Transport"""
 

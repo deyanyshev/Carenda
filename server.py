@@ -1,5 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask import send_from_directory
+
+from models.Car import Car
+from models.Motorcycle import Motorcycle
 from models.User import User
 
 app = Flask(__name__)
@@ -210,16 +214,15 @@ def get_transports():
             'img': transport.img,
             'price_per_hour': transport.price_per_hour,
             'is_available': transport.is_available,
-            'type': transport.get_type()
         }
 
         # Добавляем специфичные поля для автомобилей
-        if transport.get_type() == 'car':
+        if type(transport).__name__ == 'Car':
             transport_data['seats'] = transport.seats
             transport_data['transmission'] = transport.transmission
 
         # Добавляем специфичные поля для мотоциклов
-        elif transport.get_type() == 'motorcycle':
+        else:
             transport_data['bike_type'] = transport.bike_type
             transport_data['engine_volume'] = transport.engine_volume
             transport_data['has_helmet'] = transport.has_helmet
@@ -228,5 +231,49 @@ def get_transports():
 
     return jsonify(transports_data), 200
 
+
+@app.route('/transports/<transport_id>', methods=['GET'])
+def get_transport(transport_id):
+    """Получить конкретный транспорт по ID"""
+
+    # Ищем транспорт по ID
+    transport = next((t for t in transports if t.transport_id == transport_id), None)
+
+    # Если транспорт не найден - возвращаем ошибку
+    if not transport:
+        return jsonify({'error': 'Transport not found'}), 404
+
+    # Базовые данные для всех типов транспорта
+    transport_data = {
+        'id': transport.transport_id,
+        'brand': transport.brand,
+        'model': transport.model,
+        'year': transport.year,
+        'img': transport.img,
+        'price_per_hour': transport.price_per_hour,
+        'is_available': transport.is_available,
+        'type': transport.get_type()
+    }
+
+    # Добавляем специфичные поля для автомобилей
+    if transport.get_type() == 'car':
+        transport_data['seats'] = transport.seats
+        transport_data['transmission'] = transport.transmission
+
+    # Добавляем специфичные поля для мотоциклов
+    elif transport.get_type() == 'motorcycle':
+        transport_data['bike_type'] = transport.bike_type
+        transport_data['engine_volume'] = transport.engine_volume
+        transport_data['has_helmet'] = transport.has_helmet
+
+    return jsonify(transport_data), 200
+
+
+@app.route('/images/<filename>')
+def get_image(filename):
+    return send_from_directory('photo', filename)
+
+
 if __name__ == '__main__':
+    initialize_transports()
     app.run(debug=True)
