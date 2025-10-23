@@ -13,3 +13,4 @@ class Motorcycle(Transport):
         self.bike_type = bike_type  # Тип мотоцикла: "sport" (спортивный), "cruiser" (круизер), "touring" (туристический)
         self.engine_volume = engine_volume  # Объем двигателя в кубических сантиметрах (например: 600, 1000, 1200)
         self.has_helmet = has_helmet  # Включен ли шлем в аренду (True/False)
+
