@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from models.User import User
 
 app = Flask(__name__)
+CORS(app, origins=['http://localhost:4200'])
 users = []
 
 
@@ -17,7 +19,6 @@ def register():
     users.append(User(len(users) + 1, data['login'], data['password'], data['phone']))
 
     return jsonify({'id': users[-1].id}), 200
-
 
 
 @app.route('/login', methods=['POST'])
