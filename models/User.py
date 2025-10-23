@@ -1,13 +1,12 @@
 class User:
     """Класс пользователя системы каршеринга"""
 
-    def __init__(self, user_id, name, email, phone, driver_license):
+    def __init__(self, id, login, password, phone,):
         # Основная информация о пользователе
-        self.user_id = user_id  # Уникальный идентификатор пользователя
-        self.name = name  # Полное имя пользователя
-        self.email = email  # Электронная почта пользователя
+        self.id = id  # Уникальный идентификатор пользователя
+        self.login = login  # Полное имя пользователя
+        self.password = password
         self.phone = phone  # Номер телефона пользователя
-        self.driver_license = driver_license  # Номер водительского удостоверения
 
         # История и текущая аренда
         self.rental_history = []  # Список предыдущих аренд (история поездок)
