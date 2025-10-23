@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from models.User import User
 
 app = Flask(__name__)
+CORS(app, origins=['http://localhost:4200'])
 users = []
 
 
@@ -31,8 +33,24 @@ def login():
     if not user:
         return jsonify({'error': 'Invalid login or password'}), 401
 
-    return jsonify({'id': users[-1].id}), 200
+    return jsonify({'id': user.id}), 200
 
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    # Ищем пользователя по ID
+    user = next((u for u in users if u.id == user_id), None)
+
+    # Если пользователь не найден - возвращаем ошибку
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Возвращаем данные пользователя
+    return jsonify({
+        'id': user.id,
+        'login': user.login,
+        'phone': user.phone
+        # Не возвращаем пароль из соображений безопасности!
+    }), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
