@@ -1,10 +1,11 @@
-from abc import ABC, abstractmethod
+import random
+from abc import ABC
 
 
 class Transport(ABC):
     """Абстрактный класс Transport - базовый класс для всех видов транспорта"""
 
-    def __init__(self, brand, model, year, img, price_per_hour, transport_id=None):
+    def __init__(self, brand, model, year, img, price_per_hour):
         self.brand = brand  # Марка транспорта (например: "Toyota", "BMW")
         self.model = model  # Модель транспорта (например: "Camry", "R1200")
         self.year = year  # Год выпуска транспорта (например: 2022)
@@ -17,7 +18,7 @@ class Transport(ABC):
 
         # Уникальный идентификатор транспорта
         # Если не указан, генерируется автоматически из марки, модели и года
-        self.transport_id = transport_id
+        self.transport_id = random.randint(1, 100000000)
 
 
 

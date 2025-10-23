@@ -1,3 +1,6 @@
+from models.Transport import Transport
+
+
 class Motorcycle(Transport):
     """Класс мотоцикла - наследует от Transport"""
 
