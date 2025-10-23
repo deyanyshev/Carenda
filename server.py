@@ -189,11 +189,31 @@ def get_user(user_id):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
+    # Преобразуем историю аренд в словари
+    rental_history_data = []
+    for rental in user.rental_history:
+        rental_data = {
+            'transport_id': rental.transport.transport_id,
+            'start_time': rental.start_date.isoformat() if rental.start_date else None,
+            'end_time': rental.end_date.isoformat() if rental.end_date else None
+        }
+        rental_history_data.append(rental_data)
+
+    # Преобразуем текущую аренду в словарь
+    current_rental_data = None
+    if user.current_rental:
+        current_rental_data = {
+            'transport_id': user.current_rental.transport.transport_id,
+            'start_time': user.current_rental.start_date.isoformat() if user.current_rental.start_date else None
+        }
+
     # Возвращаем данные пользователя
     return jsonify({
         'id': user.id,
         'login': user.login,
-        'phone': user.phone
+        'phone': user.phone,
+        'current_rental': current_rental_data,  # Добавляем текущую аренду
+        'rental_history': rental_history_data   # Добавляем историю аренд
         # Не возвращаем пароль из соображений безопасности!
     }), 200
 
@@ -272,6 +292,82 @@ def get_transport(transport_id):
 @app.route('/images/<filename>')
 def get_image(filename):
     return send_from_directory('photo', filename)
+
+
+
+@app.route('/transports/<transport_id>', methods=['GET'])
+def get_transport(transport_id):
+    """Получить конкретный транспорт по ID"""
+
+    # Ищем транспорт по ID
+    transport = next((t for t in transports if t.transport_id == transport_id), None)
+
+    # Если транспорт не найден - возвращаем ошибку
+    if not transport:
+        return jsonify({'error': 'Transport not found'}), 404
+
+    # Базовые данные для всех типов транспорта
+    transport_data = {
+        'id': transport.transport_id,
+        'brand': transport.brand,
+        'model': transport.model,
+        'year': transport.year,
+        'img': transport.img,
+        'price_per_hour': transport.price_per_hour,
+        'is_available': transport.is_available,
+        'type': transport.get_type()
+    }
+
+    # Добавляем специфичные поля для автомобилей
+    if transport.get_type() == 'car':
+        transport_data['seats'] = transport.seats
+        transport_data['transmission'] = transport.transmission
+
+    # Добавляем специфичные поля для мотоциклов
+    elif transport.get_type() == 'motorcycle':
+        transport_data['bike_type'] = transport.bike_type
+        transport_data['engine_volume'] = transport.engine_volume
+        transport_data['has_helmet'] = transport.has_helmet
+
+    return jsonify(transport_data), 200
+
+
+
+@app.route('/transports/<transport_id>/rent', methods=['PATCH'])
+def rent_transport(transport_id):
+    """Начать аренду транспорта"""
+    data = request.json
+
+    # Проверяем обязательное поле user_id
+    if not data.get('user_id'):
+        return jsonify({'error': 'Need user_id'}), 400
+
+    # Ищем транспорт и пользователя
+    transport = next((t for t in transports if t.transport_id == transport_id), None)
+    user = next((u for u in users if u.id == data['user_id']), None)
+
+    # Проверяем что нашли и транспорт и пользователя
+    if not transport:
+        return jsonify({'error': 'Transport not found'}), 404
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Проверяем доступность транспорта
+    if not transport.is_available:
+        return jsonify({'error': 'Transport is already rented'}), 400
+
+    # Проверяем что у пользователя нет активной аренды
+    if user.current_rental:
+        return jsonify({'error': 'User already has active rental'}), 400
+
+    # Начинаем аренду
+    transport.is_available = False
+    user.current_rental = {
+        'transport_id': transport_id,
+        'start_time': datetime.now().isoformat()
+    }
+
+    return  200
 
 
 if __name__ == '__main__':
