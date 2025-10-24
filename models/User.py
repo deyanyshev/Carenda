@@ -17,6 +17,7 @@ class User:
         self.rental_history = []  # Список предыдущих аренд (история поездок)
         self.current_rental = None  # Текущая активная аренда (None если нет активной аренды)
 
+
     def rent_transport(self, transport):
         if self.current_rental:
             return False  # Уже есть активная аренда
@@ -27,6 +28,7 @@ class User:
         transport.is_available = False
         self.current_rental = Rental(transport)
         return True
+
 
     def end_rental(self):
         if not self.current_rental:

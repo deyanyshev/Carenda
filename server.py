@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask import send_from_directory
-from datetime import datetime
 
 from models.Car import Car
 from models.Motorcycle import Motorcycle
@@ -9,8 +8,10 @@ from models.User import User
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:4200'])
+
 users = []
 transports = []
+
 
 def initialize_transports():
     # АВТОМОБИЛИ
@@ -150,9 +151,6 @@ def initialize_transports():
     ])
 
 
-
-
-
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -181,6 +179,7 @@ def login():
 
     return jsonify({'id': user.id}), 200
 
+
 @app.route('/users/<int:user_id>', methods=['GET'])
 def get_user(user_id):
     user = next((u for u in users if u.id == user_id), None)
@@ -191,8 +190,31 @@ def get_user(user_id):
     # Преобразуем историю аренд в словари
     rental_history_data = []
     for rental in user.rental_history:
+        transport = rental.transport
+
+        transport_data = {
+            'id': transport.transport_id,
+            'brand': transport.brand,
+            'model': transport.model,
+            'year': transport.year,
+            'img': transport.img,
+            'price_per_hour': transport.price_per_hour,
+            'is_available': transport.is_available,
+        }
+
+        # Добавляем специфичные поля для автомобилей
+        if type(transport).__name__ == 'Car':
+            transport_data['seats'] = transport.seats
+            transport_data['transmission'] = transport.transmission
+
+        # Добавляем специфичные поля для мотоциклов
+        else:
+            transport_data['bike_type'] = transport.bike_type
+            transport_data['engine_volume'] = transport.engine_volume
+            transport_data['has_helmet'] = transport.has_helmet
+
         rental_data = {
-            'transport_id': rental.transport.transport_id,
+            'transport': transport_data,
             'transport_type': rental.transport_type,
             'start_time': rental.start_date.isoformat() if rental.start_date else None,
             'end_time': rental.end_date.isoformat() if rental.end_date else None
@@ -202,8 +224,31 @@ def get_user(user_id):
     # Преобразуем текущую аренду в словарь
     current_rental_data = None
     if user.current_rental:
+        transport = user.current_rental.transport
+
+        transport_data = {
+            'id': transport.transport_id,
+            'brand': transport.brand,
+            'model': transport.model,
+            'year': transport.year,
+            'img': transport.img,
+            'price_per_hour': transport.price_per_hour,
+            'is_available': transport.is_available,
+        }
+
+        # Добавляем специфичные поля для автомобилей
+        if type(transport).__name__ == 'Car':
+            transport_data['seats'] = transport.seats
+            transport_data['transmission'] = transport.transmission
+
+        # Добавляем специфичные поля для мотоциклов
+        else:
+            transport_data['bike_type'] = transport.bike_type
+            transport_data['engine_volume'] = transport.engine_volume
+            transport_data['has_helmet'] = transport.has_helmet
+
         current_rental_data = {
-            'transport_id': user.current_rental.transport.transport_id,
+            'transport': transport_data,
             'transport_type': user.current_rental.transport_type,
             'start_time': user.current_rental.start_date.isoformat() if user.current_rental.start_date else None
         }
@@ -251,7 +296,7 @@ def get_transports():
     return jsonify(transports_data), 200
 
 
-@app.route('/transports/<transport_id>', methods=['GET'])
+@app.route('/transports/<int:transport_id>', methods=['GET'])
 def get_transport(transport_id):
     """Получить конкретный транспорт по ID"""
 
@@ -271,16 +316,15 @@ def get_transport(transport_id):
         'img': transport.img,
         'price_per_hour': transport.price_per_hour,
         'is_available': transport.is_available,
-        'type': transport.get_type()
     }
 
     # Добавляем специфичные поля для автомобилей
-    if transport.get_type() == 'car':
+    if type(transport).__name__ == 'Car':
         transport_data['seats'] = transport.seats
         transport_data['transmission'] = transport.transmission
 
     # Добавляем специфичные поля для мотоциклов
-    elif transport.get_type() == 'motorcycle':
+    else:
         transport_data['bike_type'] = transport.bike_type
         transport_data['engine_volume'] = transport.engine_volume
         transport_data['has_helmet'] = transport.has_helmet
@@ -293,7 +337,7 @@ def get_image(filename):
     return send_from_directory('photo', filename)
 
 
-@app.route('/transports/<transport_id>/rent', methods=['PATCH'])
+@app.route('/transports/<int:transport_id>/rent', methods=['PATCH'])
 def rent_transport(transport_id):
     """Начать аренду транспорта"""
     data = request.json
@@ -302,62 +346,21 @@ def rent_transport(transport_id):
         return jsonify({'error': 'Need user_id'}), 400
 
     transport = next((t for t in transports if t.transport_id == transport_id), None)
-    user = next((u for u in users if u.id == data['user_id']), None)
+    user = next((u for u in users if u.id == int(data['user_id'])), None)
 
-    if not transport:
-        return jsonify({'error': 'Transport not found'}), 404
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    if not transport.is_available:
-        return jsonify({'error': 'Transport is already rented'}), 400
-    if user.current_rental:
-        return jsonify({'error': 'User already has active rental'}), 400
-
-    # Начинаем аренду с использованием класса Rental
-    from models.Rental import Rental
-    rental = Rental(transport)
-
-    transport.is_available = False
-    user.current_rental = rental
-
-    return jsonify({
-        'success': True,
-        'message': 'Rental started successfully',
-        'rental_info': {
-            'user_id': user.id,
-            'transport_id': transport_id,
-            'transport_type': rental.transport_type,
-            'start_time': rental.start_date.isoformat()
-        }
-    }), 200
+    if user.rent_transport(transport):
+        return jsonify({}), 200
+    return jsonify({'error': 'Failed to rent'}), 400
 
 
-@app.route('/transports/<transport_id>/return', methods=['PATCH'])
-def return_transport(transport_id):
+@app.route('/users/<int:user_id>/return', methods=['PATCH'])
+def return_transport(user_id):
     """Завершить аренду транспорта"""
-    data = request.json
-
-    if not data.get('user_id'):
-        return jsonify({'error': 'Need user_id'}), 400
-
-    transport = next((t for t in transports if t.transport_id == transport_id), None)
-    user = next((u for u in users if u.id == data['user_id']), None)
-
-    if not transport:
-        return jsonify({'error': 'Transport not found'}), 404
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    if not user.current_rental:
-        return jsonify({'error': 'User has no active rental'}), 400
-    if user.current_rental.transport.transport_id != transport_id:
-        return jsonify({'error': 'This transport is not rented by this user'}), 400
+    user = next((u for u in users if u.id == user_id), None)
 
     # Завершаем аренду
     if user.end_rental():
-        return jsonify({
-            'success': True,
-            'message': 'Rental ended successfully'
-        }), 200
+        return jsonify({}), 200
     else:
         return jsonify({'error': 'Failed to end rental'}), 400
 
